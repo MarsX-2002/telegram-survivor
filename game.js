@@ -296,12 +296,26 @@ class Game {
 
 function initGame() {
     try {
-        console.log('Initializing game...');
-        const game = new Game();
-        document.getElementById('restart-button').addEventListener('click', () => game.restart());
-        console.log('Game initialized successfully');
+        console.log('Waiting for DOM and Telegram WebApp...');
+        
+        // Function to check if everything is ready
+        const checkReady = () => {
+            if (document.readyState === 'complete' && window.Telegram && window.Telegram.WebApp) {
+                console.log('DOM and Telegram WebApp ready, initializing game...');
+                new Game();
+            } else {
+                console.log('Waiting for initialization...');
+                setTimeout(checkReady, 100);
+            }
+        };
+
+        // Start checking
+        checkReady();
     } catch (error) {
         console.error('Error initializing game:', error);
+        // Fallback to initialize without Telegram WebApp
+        console.log('Falling back to standalone mode...');
+        new Game();
     }
 }
 
