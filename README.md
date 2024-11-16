@@ -3,7 +3,7 @@
 A Survivor.io-style game built as a Telegram Mini App.
 
 ## Setup
-1. The game is hosted using GitHub Pages
+1. The game is hosted using GitHub Pages [https://marsx-2002.github.io/telegram-survivor/]
 2. Access the game through Telegram Bot: [https://t.me/LearnifyGameBot]
 
 ## How to Play
