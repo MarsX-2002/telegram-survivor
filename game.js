@@ -29,13 +29,13 @@ class Game {
         this.lastSpawnTime = 0;
         this.spawnInterval = 1000; // Spawn enemy every second
         
-        // Start game loop
-        this.lastTime = 0;
-        this.animate(0);
-
         // Setup controls
         this.setupControls();
         this.setupDesktopControls();
+        
+        // Start game loop
+        this.lastTime = 0;
+        this.animate(0);
     }
 
     resizeCanvas() {
@@ -253,17 +253,26 @@ class Game {
     }
 }
 
-// Initialize game when document is loaded
-window.addEventListener('DOMContentLoaded', () => {
-    // Wait for Telegram Web App to be ready
-    if (tg) {
-        tg.ready();
-        tg.expand();
+function initGame() {
+    try {
+        console.log('Initializing game...');
+        const game = new Game();
+        document.getElementById('restart-button').addEventListener('click', () => game.restart());
+        console.log('Game initialized successfully');
+    } catch (error) {
+        console.error('Error initializing game:', error);
     }
-    
-    // Initialize game
-    const game = new Game();
-    
-    // Setup restart button
-    document.getElementById('restart-button').addEventListener('click', () => game.restart());
-});
+}
+
+// Handle both Telegram WebApp and regular browser
+if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+}
+
+// Start the game
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+}
