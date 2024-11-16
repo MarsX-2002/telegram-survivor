@@ -1,25 +1,39 @@
 class Projectile {
-    constructor(game, x, y, velocity, damage) {
-        this.game = game;
+    constructor(x, y, vx, vy, damage) {
         this.x = x;
         this.y = y;
-        this.velocity = velocity;
-        this.damage = damage;
+        this.vx = vx;
+        this.vy = vy;
         this.radius = 5;
-        this.color = '#FF0';
-        this.hit = false;
+        this.damage = damage;
     }
 
-    update() {
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
+    update(deltaTime) {
+        this.x += this.vx * deltaTime;
+        this.y += this.vy * deltaTime;
     }
 
     draw(ctx) {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = '#ffff00';
         ctx.fill();
-        ctx.closePath();
+        ctx.strokeStyle = '#ffa500';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    checkCollision(object) {
+        const dx = this.x - object.x;
+        const dy = this.y - object.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < this.radius + object.radius;
+    }
+
+    isOffScreen(width, height) {
+        return this.x < -this.radius || 
+               this.x > width + this.radius || 
+               this.y < -this.radius || 
+               this.y > height + this.radius;
     }
 }

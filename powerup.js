@@ -1,91 +1,108 @@
-class PowerUp {
-    constructor(game, x, y, type) {
-        this.game = game;
+class Powerup {
+    constructor(x, y, type) {
         this.x = x;
         this.y = y;
-        this.type = type;
-        this.radius = 15;
-        this.collected = false;
+        this.type = type; // 0: speed, 1: damage, 2: multishot, 3: health
+        this.radius = 10;
+        this.duration = 5; // seconds
         
-        // Define power-up properties based on type
-        switch(type) {
-            case 'speed':
-                this.color = '#00FF00';
-                this.duration = 5000; // 5 seconds
-                this.multiplier = 1.5;
-                break;
-            case 'damage':
-                this.color = '#FF0000';
-                this.duration = 8000; // 8 seconds
-                this.multiplier = 2;
-                break;
-            case 'multishot':
-                this.color = '#FFFF00';
-                this.duration = 10000; // 10 seconds
-                this.shots = 3;
-                break;
-            case 'health':
-                this.color = '#FF69B4';
-                this.healing = 50;
-                break;
-        }
-    }
-
-    collect(player) {
-        if (this.collected) return;
-        
-        this.collected = true;
-        switch(this.type) {
-            case 'speed':
-                const originalSpeed = player.speed;
-                player.speed *= this.multiplier;
-                setTimeout(() => {
-                    player.speed = originalSpeed;
-                }, this.duration);
-                break;
-            case 'damage':
-                const originalDamage = player.weaponDamage;
-                player.weaponDamage *= this.multiplier;
-                setTimeout(() => {
-                    player.weaponDamage = originalDamage;
-                }, this.duration);
-                break;
-            case 'multishot':
-                const originalShots = player.multishot;
-                player.multishot = this.shots;
-                setTimeout(() => {
-                    player.multishot = originalShots;
-                }, this.duration);
-                break;
-            case 'health':
-                player.health = Math.min(100, player.health + this.healing);
-                break;
-        }
+        // Animation
+        this.angle = 0;
+        this.rotationSpeed = Math.PI; // radians per second
     }
 
     draw(ctx) {
-        if (this.collected) return;
-
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.closePath();
-
-        // Draw icon based on type
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
         
-        let icon = '';
+        // Draw power-up
+        ctx.beginPath();
+        
         switch(this.type) {
-            case 'speed': icon = '⚡'; break;
-            case 'damage': icon = '⚔️'; break;
-            case 'multishot': icon = '☄️'; break;
-            case 'health': icon = '❤️'; break;
+            case 0: // Speed (lightning bolt)
+                ctx.fillStyle = '#ffff00';
+                ctx.strokeStyle = '#ffa500';
+                this.drawLightning(ctx);
+                break;
+            case 1: // Damage (sword)
+                ctx.fillStyle = '#ff4444';
+                ctx.strokeStyle = '#cc0000';
+                this.drawSword(ctx);
+                break;
+            case 2: // Multishot (three dots)
+                ctx.fillStyle = '#44ff44';
+                ctx.strokeStyle = '#00cc00';
+                this.drawMultishot(ctx);
+                break;
+            case 3: // Health (heart)
+                ctx.fillStyle = '#ff4444';
+                ctx.strokeStyle = '#cc0000';
+                this.drawHeart(ctx);
+                break;
         }
         
-        ctx.fillText(icon, this.x, this.y);
+        ctx.restore();
+        
+        // Update rotation
+        this.angle += this.rotationSpeed / 60; // Assuming 60 FPS
+    }
+    
+    drawLightning(ctx) {
+        ctx.beginPath();
+        ctx.moveTo(-5, -10);
+        ctx.lineTo(2, -2);
+        ctx.lineTo(-2, 2);
+        ctx.lineTo(5, 10);
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+    
+    drawSword(ctx) {
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(0, 10);
+        ctx.moveTo(-5, -5);
+        ctx.lineTo(5, 5);
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+    
+    drawMultishot(ctx) {
+        for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.arc(i * 6, 0, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+    
+    drawHeart(ctx) {
+        ctx.beginPath();
+        ctx.moveTo(0, 5);
+        ctx.bezierCurveTo(-5, 0, -10, 5, 0, 10);
+        ctx.bezierCurveTo(10, 5, 5, 0, 0, 5);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    apply(player) {
+        switch(this.type) {
+            case 0: // Speed boost
+                player.speed = 400;
+                player.speedBoostTimer = this.duration;
+                break;
+            case 1: // Damage boost
+                player.damage = 40;
+                player.damageBoostTimer = this.duration;
+                break;
+            case 2: // Multishot
+                player.multishot = 3;
+                player.multishotTimer = this.duration;
+                break;
+            case 3: // Health
+                player.heal(50);
+                break;
+        }
     }
 }

@@ -1,67 +1,55 @@
 class Enemy {
-    constructor(game, x, y) {
-        this.game = game;
+    constructor(x, y, health = 100) {
         this.x = x;
         this.y = y;
         this.radius = 15;
-        this.speed = 2 + (game.level * 0.2); // Increase speed with level
-        this.health = 50 + (game.level * 10); // Increase health with level
-        this.maxHealth = this.health;
-        this.dead = false;
-        this.color = '#FF0000';
+        this.speed = 100;
+        this.health = health;
+        this.maxHealth = health;
     }
 
-    update() {
-        if (this.dead) return;
-
+    update(deltaTime, player) {
         // Move towards player
-        const dx = this.game.player.x - this.x;
-        const dy = this.game.player.y - this.y;
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance > 0) {
-            this.x += (dx / distance) * this.speed;
-            this.y += (dy / distance) * this.speed;
+        if (distance > 1) {
+            const moveX = (dx / distance) * this.speed * deltaTime;
+            const moveY = (dy / distance) * this.speed * deltaTime;
+            this.x += moveX;
+            this.y += moveY;
         }
     }
 
     draw(ctx) {
-        if (this.dead) return;
-
-        // Draw enemy body
+        // Draw enemy
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = '#ff4444';
         ctx.fill();
-        ctx.closePath();
+        ctx.strokeStyle = '#cc0000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
         // Draw health bar
-        const healthBarWidth = 30;
-        const healthBarHeight = 4;
-        const healthBarY = this.y + this.radius + 5;
-        
-        // Background (empty health)
-        ctx.fillStyle = '#FF0000';
-        ctx.fillRect(this.x - healthBarWidth/2, healthBarY, healthBarWidth, healthBarHeight);
-        
-        // Foreground (current health)
-        ctx.fillStyle = '#00FF00';
-        const currentHealthWidth = (this.health / this.maxHealth) * healthBarWidth;
-        ctx.fillRect(this.x - healthBarWidth/2, healthBarY, currentHealthWidth, healthBarHeight);
+        const barWidth = 30;
+        const barHeight = 4;
+        const barX = this.x - barWidth / 2;
+        const barY = this.y + this.radius + 5;
+
+        // Background
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Health
+        const healthWidth = (this.health / this.maxHealth) * barWidth;
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(barX, barY, healthWidth, barHeight);
     }
 
     takeDamage(amount) {
-        this.health -= amount;
-        if (this.health <= 0) {
-            this.die();
-        }
-    }
-
-    die() {
-        this.dead = true;
-        this.game.score += 10;
-        if (this.game.score % 100 === 0) {
-            this.game.level++;
-        }
+        this.health = Math.max(0, this.health - amount);
+        return this.health <= 0;
     }
 }
