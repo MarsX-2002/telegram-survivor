@@ -44,6 +44,19 @@ class Game {
     }
 
     setupEventListeners() {
+        // Handle keyboard events
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault(); // Prevent default browser actions
+            console.log('Key pressed:', e.key); // Debug log
+            this.player.handleKeyDown(e.key);
+        });
+
+        document.addEventListener('keyup', (e) => {
+            e.preventDefault(); // Prevent default browser actions
+            console.log('Key released:', e.key); // Debug log
+            this.player.handleKeyUp(e.key);
+        });
+
         // Handle touch events
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -86,6 +99,11 @@ class Game {
 
         // Handle window resize
         window.addEventListener('resize', () => this.resizeCanvas());
+
+        // Focus canvas on click to ensure keyboard events work
+        this.canvas.addEventListener('click', () => {
+            this.canvas.focus();
+        });
     }
 
     start() {
@@ -99,7 +117,6 @@ class Game {
 
     stop() {
         this.isRunning = false;
-        console.log('Game stopped');
     }
 
     spawnEnemy() {
@@ -109,176 +126,120 @@ class Game {
         switch(side) {
             case 0: // top
                 x = Math.random() * this.canvas.width;
-                y = -20;
+                y = -30;
                 break;
             case 1: // right
-                x = this.canvas.width + 20;
+                x = this.canvas.width + 30;
                 y = Math.random() * this.canvas.height;
                 break;
             case 2: // bottom
                 x = Math.random() * this.canvas.width;
-                y = this.canvas.height + 20;
+                y = this.canvas.height + 30;
                 break;
             case 3: // left
-                x = -20;
+                x = -30;
                 y = Math.random() * this.canvas.height;
                 break;
         }
-
-        const enemy = new Enemy(x, y, 20 + this.level * 2); // Size increases with level
-        this.enemies.push(enemy);
+        
+        this.enemies.push(new Enemy(x, y));
     }
 
     spawnPowerup() {
-        if (Math.random() < 0.01) { // 1% chance per frame
-            const x = Math.random() * (this.canvas.width - 40) + 20;
-            const y = Math.random() * (this.canvas.height - 40) + 20;
-            const type = Math.floor(Math.random() * 4); // 0: speed, 1: damage, 2: multishot, 3: health
-            this.powerups.push(new Powerup(x, y, type));
-        }
+        const x = Math.random() * (this.canvas.width - 40) + 20;
+        const y = Math.random() * (this.canvas.height - 40) + 20;
+        this.powerups.push(new Powerup(x, y));
     }
 
-    update(deltaTime) {
-        // Update player
+    updateScore(points) {
+        this.score += points;
+        document.getElementById('scoreValue').textContent = this.score;
+    }
+
+    updateLevel() {
+        this.level++;
+        document.getElementById('levelValue').textContent = this.level;
+    }
+
+    gameLoop(currentTime) {
+        if (!this.isRunning) return;
+
+        const deltaTime = (currentTime - this.lastTime) / 1000;
+        this.lastTime = currentTime;
+
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Update and draw player
         this.player.update(deltaTime);
+        this.player.draw(this.ctx);
+
+        // Update and draw projectiles
+        this.player.projectiles = this.player.projectiles.filter(projectile => {
+            projectile.update(deltaTime);
+            projectile.draw(this.ctx);
+            return !projectile.isOffScreen(this.canvas.width, this.canvas.height);
+        });
 
         // Spawn enemies
-        if (Math.random() < 0.02 + (this.level * 0.005)) { // Increase spawn rate with level
+        if (Math.random() < 0.02 + (this.level * 0.005)) {
             this.spawnEnemy();
         }
 
         // Spawn powerups
-        this.spawnPowerup();
+        if (Math.random() < 0.002) {
+            this.spawnPowerup();
+        }
 
-        // Update enemies
-        this.enemies.forEach((enemy, index) => {
-            enemy.update(deltaTime, this.player);
-            
+        // Update and draw enemies
+        this.enemies = this.enemies.filter(enemy => {
+            enemy.update(deltaTime, this.player.x, this.player.y);
+            enemy.draw(this.ctx);
+
             // Check collision with player
-            if (this.player.checkCollision(enemy)) {
+            if (enemy.checkCollision(this.player)) {
                 this.player.takeDamage(10);
-                this.enemies.splice(index, 1);
-                
-                if (this.player.health <= 0) {
-                    this.gameOver();
-                }
+                return false;
             }
-        });
 
-        // Update powerups
-        this.powerups.forEach((powerup, index) => {
-            if (this.player.checkCollision(powerup)) {
-                powerup.apply(this.player);
-                this.powerups.splice(index, 1);
-                this.score += 50;
-            }
-        });
-
-        // Update projectiles
-        this.player.projectiles.forEach((projectile, pIndex) => {
-            projectile.update(deltaTime);
-            
-            // Check collision with enemies
-            this.enemies.forEach((enemy, eIndex) => {
+            // Check collision with projectiles
+            for (let projectile of this.player.projectiles) {
                 if (projectile.checkCollision(enemy)) {
                     enemy.takeDamage(projectile.damage);
-                    this.player.projectiles.splice(pIndex, 1);
-                    
                     if (enemy.health <= 0) {
-                        this.enemies.splice(eIndex, 1);
-                        this.score += 100;
-                        
-                        // Level up every 1000 points
-                        if (this.score % 1000 === 0) {
-                            this.level++;
-                            document.getElementById('level-value').textContent = this.level;
+                        this.updateScore(10);
+                        if (this.score % 100 === 0) {
+                            this.updateLevel();
                         }
+                        return false;
                     }
-                    return;
+                    return true;
                 }
-            });
-            
-            // Remove projectiles that are off screen
-            if (projectile.isOffScreen(this.canvas.width, this.canvas.height)) {
-                this.player.projectiles.splice(pIndex, 1);
             }
+
+            return true;
         });
 
-        // Update score display
-        document.getElementById('score-value').textContent = this.score;
-    }
+        // Update and draw powerups
+        this.powerups = this.powerups.filter(powerup => {
+            powerup.update(deltaTime);
+            powerup.draw(this.ctx);
 
-    draw() {
-        // Clear canvas
-        this.ctx.fillStyle = '#1a1a1a';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            if (powerup.checkCollision(this.player)) {
+                powerup.apply(this.player);
+                return false;
+            }
 
-        // Draw grid lines for visual reference
-        this.ctx.strokeStyle = '#333333';
-        this.ctx.lineWidth = 1;
-        
-        // Vertical lines
-        for (let x = 0; x < this.canvas.width; x += 50) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.canvas.height);
-            this.ctx.stroke();
+            return true;
+        });
+
+        // Check game over
+        if (this.player.health <= 0) {
+            this.stop();
+            console.log('Game Over');
+            return;
         }
-        
-        // Horizontal lines
-        for (let y = 0; y < this.canvas.height; y += 50) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-            this.ctx.stroke();
-        }
-
-        // Draw powerups
-        this.powerups.forEach(powerup => powerup.draw(this.ctx));
-
-        // Draw enemies
-        this.enemies.forEach(enemy => enemy.draw(this.ctx));
-
-        // Draw player
-        this.player.draw(this.ctx);
-
-        // Draw projectiles
-        this.player.projectiles.forEach(projectile => projectile.draw(this.ctx));
-    }
-
-    gameLoop(currentTime = 0) {
-        if (!this.isRunning) return;
-
-        const deltaTime = (currentTime - this.lastTime) / 1000; // Convert to seconds
-        this.lastTime = currentTime;
-
-        this.update(deltaTime);
-        this.draw();
 
         requestAnimationFrame((time) => this.gameLoop(time));
-    }
-
-    gameOver() {
-        this.stop();
-        document.getElementById('final-score').textContent = this.score;
-        document.getElementById('menu').classList.remove('hidden');
-        
-        // Setup restart button
-        const restartButton = document.getElementById('restart-button');
-        restartButton.onclick = () => {
-            document.getElementById('menu').classList.add('hidden');
-            this.reset();
-            this.start();
-        };
-    }
-
-    reset() {
-        this.score = 0;
-        this.level = 1;
-        this.enemies = [];
-        this.powerups = [];
-        this.player.reset(this.canvas.width / 2, this.canvas.height / 2);
-        document.getElementById('score-value').textContent = '0';
-        document.getElementById('level-value').textContent = '1';
     }
 }

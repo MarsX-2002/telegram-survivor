@@ -1,13 +1,14 @@
 body {
     margin: 0;
     padding: 0;
-    overflow: hidden;
     width: 100vw;
     height: 100vh;
+    overflow: hidden;
+    background-color: #1a1a1a;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #1a1a1a;
+    font-family: Arial, sans-serif;
 }
 
 #game-container {
@@ -24,7 +25,28 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
+    background-color: #1a1a1a;
+    touch-action: none;
     z-index: 1;
+}
+
+#score, #level {
+    position: absolute;
+    color: white;
+    font-size: 24px;
+    padding: 10px;
+    z-index: 10;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#score {
+    top: 10px;
+    left: 10px;
+}
+
+#level {
+    top: 10px;
+    right: 10px;
 }
 
 #ui-overlay {
@@ -36,10 +58,6 @@ body {
     font-size: 20px;
     color: #ffffff;
     text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);
-}
-
-#score, #level {
-    margin: 5px;
 }
 
 #menu {
