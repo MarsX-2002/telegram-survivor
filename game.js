@@ -110,8 +110,13 @@ class Game {
         if (this.keys.ArrowLeft || this.keys.a) deltaX -= moveSpeed;
         if (this.keys.ArrowRight || this.keys.d) deltaX += moveSpeed;
 
+        // Only update if there's movement
         if (deltaX !== 0 || deltaY !== 0) {
             this.player.move(deltaX, deltaY);
+        } else {
+            // Reset velocity when no keys are pressed
+            this.player.velocityX = 0;
+            this.player.velocityY = 0;
         }
     }
 

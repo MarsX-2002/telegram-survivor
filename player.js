@@ -9,19 +9,36 @@ class Player {
         this.weapons = [];
         this.lastShot = 0;
         this.shotCooldown = 500; // milliseconds
+        this.velocityX = 0;
+        this.velocityY = 0;
     }
 
     move(deltaX, deltaY) {
-        // Normalize movement
-        const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (length > 0) {
-            const normalizedX = (deltaX / length) * this.speed;
-            const normalizedY = (deltaY / length) * this.speed;
-            
-            // Update position with bounds checking
-            this.x = Math.max(this.radius, Math.min(this.game.canvas.width - this.radius, this.x + normalizedX));
-            this.y = Math.max(this.radius, Math.min(this.game.canvas.height - this.radius, this.y + normalizedY));
+        // For keyboard movement
+        if (Number.isInteger(deltaX) && Number.isInteger(deltaY)) {
+            this.velocityX = deltaX;
+            this.velocityY = deltaY;
+        } else {
+            // For mouse/touch movement
+            const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (length > 0) {
+                const normalizedX = (deltaX / length) * this.speed;
+                const normalizedY = (deltaY / length) * this.speed;
+                
+                this.x = Math.max(this.radius, Math.min(this.game.canvas.width - this.radius, this.x + normalizedX));
+                this.y = Math.max(this.radius, Math.min(this.game.canvas.height - this.radius, this.y + normalizedY));
+            }
         }
+    }
+
+    update(deltaTime) {
+        // Update position based on velocity (for keyboard movement)
+        if (this.velocityX !== 0 || this.velocityY !== 0) {
+            this.x = Math.max(this.radius, Math.min(this.game.canvas.width - this.radius, this.x + this.velocityX));
+            this.y = Math.max(this.radius, Math.min(this.game.canvas.height - this.radius, this.y + this.velocityY));
+        }
+        
+        this.shoot();
     }
 
     shoot() {
@@ -46,10 +63,6 @@ class Player {
                 this.lastShot = currentTime;
             }
         }
-    }
-
-    update(deltaTime) {
-        this.shoot();
     }
 
     draw(ctx) {
