@@ -4,7 +4,7 @@ A Survivor.io-style game built as a Telegram Mini App.
 
 ## Setup
 1. The game is hosted using GitHub Pages
-2. Access the game through Telegram Bot: [Your Bot Name]
+2. Access the game through Telegram Bot: [https://t.me/LearnifyGameBot]
 
 ## How to Play
 - Move your character by touching and dragging on the screen
