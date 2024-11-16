@@ -2,23 +2,30 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #000;
-    font-family: Arial, sans-serif;
     width: 100vw;
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: #1a1a1a;
+    font-family: Arial, sans-serif;
+}
+
+.dark-theme {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+.light-theme {
+    background-color: #f0f0f0;
+    color: #000000;
 }
 
 #game-container {
     position: relative;
-    width: 100vw;
-    height: 100vh;
-    max-width: 800px;
-    max-height: 600px;
-    margin: auto;
-    background: #000;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
 }
 
 #gameCanvas {
@@ -27,17 +34,22 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    touch-action: none;
+    z-index: 1;
 }
 
 #ui-overlay {
     position: absolute;
     top: 10px;
     left: 10px;
-    color: white;
-    font-size: 20px;
-    z-index: 1;
+    z-index: 2;
     pointer-events: none;
+    font-size: 20px;
+    color: #ffffff;
+    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);
+}
+
+#score, #level {
+    margin: 5px;
 }
 
 #menu {
@@ -45,29 +57,44 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
+    z-index: 3;
+    background-color: rgba(0, 0, 0, 0.8);
     padding: 20px;
     border-radius: 10px;
     text-align: center;
-    color: white;
-    z-index: 2;
+    color: #ffffff;
 }
 
-#menu button {
-    padding: 10px 20px;
-    font-size: 18px;
-    background: #4CAF50;
+#menu.hidden {
+    display: none;
+}
+
+#restart-button {
+    background-color: #4CAF50;
     border: none;
-    border-radius: 5px;
     color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
     cursor: pointer;
-    margin-top: 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
 }
 
-#menu button:hover {
-    background: #45a049;
+#restart-button:hover {
+    background-color: #45a049;
 }
 
-.hidden {
-    display: none !important;
+/* Power-up animations */
+@keyframes collect {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.5); }
+    100% { transform: scale(0); }
+}
+
+.collecting {
+    animation: collect 0.3s ease-out forwards;
 }

@@ -294,7 +294,15 @@ class Game {
     }
 }
 
+let gameInstance = null;
+
 function initGame() {
+    // Prevent multiple initializations
+    if (gameInstance) {
+        console.log('Game already initialized');
+        return;
+    }
+
     try {
         console.log('Waiting for DOM and Telegram WebApp...');
         
@@ -302,7 +310,24 @@ function initGame() {
         const checkReady = () => {
             if (document.readyState === 'complete' && window.Telegram && window.Telegram.WebApp) {
                 console.log('DOM and Telegram WebApp ready, initializing game...');
-                new Game();
+                
+                // Configure Telegram WebApp
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+                
+                // Set theme colors
+                const isDarkTheme = window.Telegram.WebApp.colorScheme === 'dark';
+                document.body.className = isDarkTheme ? 'dark-theme' : 'light-theme';
+                
+                // Initialize game
+                gameInstance = new Game();
+                
+                // Handle visibility changes
+                window.Telegram.WebApp.onEvent('viewportChanged', () => {
+                    if (gameInstance) {
+                        gameInstance.resizeCanvas();
+                    }
+                });
             } else {
                 console.log('Waiting for initialization...');
                 setTimeout(checkReady, 100);
@@ -315,7 +340,7 @@ function initGame() {
         console.error('Error initializing game:', error);
         // Fallback to initialize without Telegram WebApp
         console.log('Falling back to standalone mode...');
-        new Game();
+        gameInstance = new Game();
     }
 }
 
