@@ -25,8 +25,9 @@ class Game {
         this.lastTime = 0;
         this.animate(0);
 
-        // Setup touch controls
+        // Setup controls
         this.setupControls();
+        this.setupDesktopControls();
     }
 
     resizeCanvas() {
@@ -56,6 +57,62 @@ class Game {
             touchStartX = touchX;
             touchStartY = touchY;
         });
+    }
+
+    setupDesktopControls() {
+        // Mouse movement
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (e.buttons === 1) { // Left mouse button is pressed
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Move towards mouse position
+                const deltaX = mouseX - this.player.x;
+                const deltaY = mouseY - this.player.y;
+                this.player.move(deltaX, deltaY);
+            }
+        });
+
+        // Keyboard controls
+        this.keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            w: false,
+            s: false,
+            a: false,
+            d: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (this.keys.hasOwnProperty(e.key)) {
+                this.keys[e.key] = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (this.keys.hasOwnProperty(e.key)) {
+                this.keys[e.key] = false;
+            }
+        });
+    }
+
+    updatePlayerMovement() {
+        let deltaX = 0;
+        let deltaY = 0;
+        const moveSpeed = 5;
+
+        // Check keyboard input
+        if (this.keys.ArrowUp || this.keys.w) deltaY -= moveSpeed;
+        if (this.keys.ArrowDown || this.keys.s) deltaY += moveSpeed;
+        if (this.keys.ArrowLeft || this.keys.a) deltaX -= moveSpeed;
+        if (this.keys.ArrowRight || this.keys.d) deltaX += moveSpeed;
+
+        if (deltaX !== 0 || deltaY !== 0) {
+            this.player.move(deltaX, deltaY);
+        }
     }
 
     spawnEnemy() {
@@ -146,6 +203,9 @@ class Game {
             // Clear canvas
             this.ctx.fillStyle = '#000000';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Update player movement from keyboard
+            this.updatePlayerMovement();
 
             // Update and draw game objects
             this.player.update(deltaTime);
