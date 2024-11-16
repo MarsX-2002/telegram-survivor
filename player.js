@@ -1,75 +1,114 @@
 class Player {
-    constructor(game) {
+    constructor(game, x, y) {
         this.game = game;
-        this.x = game.canvas.width / 2;
-        this.y = game.canvas.height / 2;
+        this.x = x;
+        this.y = y;
         this.radius = 20;
         this.speed = 5;
-        this.color = '#4CAF50';
-        this.weapons = [];
+        this.color = '#4A90E2';
+        this.velocity = { x: 0, y: 0 };
+        this.health = 100;
+        this.maxHealth = 100;
+        this.weaponDamage = 25;
+        this.multishot = 1;
         this.lastShot = 0;
-        this.shotCooldown = 500; // milliseconds
-        this.velocityX = 0;
-        this.velocityY = 0;
+        this.shootingInterval = 500; // milliseconds
     }
 
-    move(deltaX, deltaY) {
-        // For keyboard movement
-        if (Number.isInteger(deltaX) && Number.isInteger(deltaY)) {
-            this.velocityX = deltaX;
-            this.velocityY = deltaY;
-        } else {
-            // For mouse/touch movement
-            const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            if (length > 0) {
-                const normalizedX = (deltaX / length) * this.speed;
-                const normalizedY = (deltaY / length) * this.speed;
-                
-                this.x = Math.max(this.radius, Math.min(this.game.canvas.width - this.radius, this.x + normalizedX));
-                this.y = Math.max(this.radius, Math.min(this.game.canvas.height - this.radius, this.y + normalizedY));
-            }
-        }
+    move(dx, dy) {
+        this.velocity.x = dx * this.speed;
+        this.velocity.y = dy * this.speed;
     }
 
-    update(deltaTime) {
-        // Update position based on velocity (for keyboard movement)
-        if (this.velocityX !== 0 || this.velocityY !== 0) {
-            this.x = Math.max(this.radius, Math.min(this.game.canvas.width - this.radius, this.x + this.velocityX));
-            this.y = Math.max(this.radius, Math.min(this.game.canvas.height - this.radius, this.y + this.velocityY));
+    update() {
+        // Update position based on velocity
+        this.x += this.velocity.x;
+        this.y += this.velocity.y;
+
+        // Keep player within canvas bounds
+        this.x = Math.max(this.radius, Math.min(this.game.canvas.width - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(this.game.canvas.height - this.radius, this.y));
+
+        // Auto-shooting logic
+        const now = Date.now();
+        if (now - this.lastShot >= this.shootingInterval) {
+            this.shoot();
+            this.lastShot = now;
         }
-        
-        this.shoot();
     }
 
     shoot() {
-        const currentTime = Date.now();
-        if (currentTime - this.lastShot > this.shotCooldown) {
-            // Find nearest enemy
-            let nearestEnemy = null;
-            let minDistance = Infinity;
-            
-            this.game.enemies.forEach(enemy => {
-                const distance = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestEnemy = enemy;
-                }
-            });
+        const nearestEnemy = this.findNearestEnemy();
+        if (!nearestEnemy) return;
 
-            if (nearestEnemy) {
-                const angle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
-                const weapon = new Weapon(this.game, this.x, this.y, angle);
-                this.game.weapons.push(weapon);
-                this.lastShot = currentTime;
+        // Calculate angle to nearest enemy
+        const angle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
+
+        // Create multiple projectiles if multishot is active
+        const spreadAngle = Math.PI / 8; // 22.5 degrees
+        for (let i = 0; i < this.multishot; i++) {
+            let shotAngle = angle;
+            if (this.multishot > 1) {
+                shotAngle += spreadAngle * (i - (this.multishot - 1) / 2);
             }
+            
+            const velocity = {
+                x: Math.cos(shotAngle) * 10,
+                y: Math.sin(shotAngle) * 10
+            };
+            
+            this.game.projectiles.push(new Projectile(
+                this.game,
+                this.x,
+                this.y,
+                velocity,
+                this.weaponDamage
+            ));
         }
     }
 
+    findNearestEnemy() {
+        let nearest = null;
+        let minDistance = Infinity;
+
+        for (const enemy of this.game.enemies) {
+            const distance = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = enemy;
+            }
+        }
+
+        return nearest;
+    }
+
     draw(ctx) {
+        // Draw player
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
         ctx.closePath();
+
+        // Draw health bar
+        const healthBarWidth = 40;
+        const healthBarHeight = 5;
+        const healthBarY = this.y + this.radius + 5;
+        
+        // Background (empty health)
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(this.x - healthBarWidth/2, healthBarY, healthBarWidth, healthBarHeight);
+        
+        // Foreground (current health)
+        ctx.fillStyle = '#00FF00';
+        const currentHealthWidth = (this.health / this.maxHealth) * healthBarWidth;
+        ctx.fillRect(this.x - healthBarWidth/2, healthBarY, currentHealthWidth, healthBarHeight);
+    }
+
+    takeDamage(amount) {
+        this.health -= amount;
+        if (this.health <= 0) {
+            this.game.gameOver();
+        }
     }
 }

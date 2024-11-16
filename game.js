@@ -16,26 +16,31 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.score = 0;
         this.level = 1;
+        this.gameStarted = false;
         this.gameOver = false;
         
         // Set canvas size
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
-
-        // Initialize game objects
-        this.player = new Player(this);
-        this.enemies = [];
-        this.weapons = [];
-        this.lastSpawnTime = 0;
-        this.spawnInterval = 1000; // Spawn enemy every second
         
-        // Setup controls
+        // Initialize game objects
+        this.player = new Player(this, this.canvas.width / 2, this.canvas.height / 2);
+        this.enemies = [];
+        this.projectiles = [];
+        this.powerUps = [];
+        
+        // Game settings
+        this.enemySpawnInterval = 1000;
+        this.powerUpSpawnInterval = 10000;
+        this.lastEnemySpawn = 0;
+        this.lastPowerUpSpawn = 0;
+        
+        // Initialize controls
         this.setupControls();
-        this.setupDesktopControls();
         
         // Start game loop
         this.lastTime = 0;
-        this.animate(0);
+        this.animate = this.animate.bind(this);
     }
 
     resizeCanvas() {
@@ -65,9 +70,7 @@ class Game {
             touchStartX = touchX;
             touchStartY = touchY;
         });
-    }
 
-    setupDesktopControls() {
         // Mouse movement
         this.canvas.addEventListener('mousemove', (e) => {
             if (e.buttons === 1) { // Left mouse button is pressed
@@ -107,73 +110,146 @@ class Game {
         });
     }
 
-    updatePlayerMovement() {
-        let deltaX = 0;
-        let deltaY = 0;
-        const moveSpeed = 5;
-
-        // Check keyboard input
-        if (this.keys.ArrowUp || this.keys.w) deltaY -= moveSpeed;
-        if (this.keys.ArrowDown || this.keys.s) deltaY += moveSpeed;
-        if (this.keys.ArrowLeft || this.keys.a) deltaX -= moveSpeed;
-        if (this.keys.ArrowRight || this.keys.d) deltaX += moveSpeed;
-
-        // Only update if there's movement
-        if (deltaX !== 0 || deltaY !== 0) {
-            this.player.move(deltaX, deltaY);
-        } else {
-            // Reset velocity when no keys are pressed
-            this.player.velocityX = 0;
-            this.player.velocityY = 0;
-        }
-    }
-
     spawnEnemy() {
-        const currentTime = Date.now();
-        if (currentTime - this.lastSpawnTime > this.spawnInterval) {
-            const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+        const now = Date.now();
+        if (now - this.lastEnemySpawn >= this.enemySpawnInterval) {
             let x, y;
+            const side = Math.floor(Math.random() * 4);
             
-            switch(edge) {
-                case 0: // top
+            switch(side) {
+                case 0: // Top
                     x = Math.random() * this.canvas.width;
                     y = -30;
                     break;
-                case 1: // right
+                case 1: // Right
                     x = this.canvas.width + 30;
                     y = Math.random() * this.canvas.height;
                     break;
-                case 2: // bottom
+                case 2: // Bottom
                     x = Math.random() * this.canvas.width;
                     y = this.canvas.height + 30;
                     break;
-                case 3: // left
+                case 3: // Left
                     x = -30;
                     y = Math.random() * this.canvas.height;
                     break;
             }
             
             this.enemies.push(new Enemy(this, x, y));
-            this.lastSpawnTime = currentTime;
+            this.lastEnemySpawn = now;
+            
+            // Increase difficulty
+            this.enemySpawnInterval = Math.max(200, 1000 - (this.level * 50));
         }
     }
 
-    updateScore(points) {
-        this.score += points;
-        document.getElementById('score-value').textContent = this.score;
+    spawnPowerUp() {
+        const now = Date.now();
+        if (now - this.lastPowerUpSpawn >= this.powerUpSpawnInterval) {
+            const types = ['speed', 'damage', 'multishot', 'health'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            const x = Math.random() * (this.canvas.width - 60) + 30;
+            const y = Math.random() * (this.canvas.height - 60) + 30;
+            
+            this.powerUps.push(new PowerUp(this, x, y, type));
+            this.lastPowerUpSpawn = now;
+        }
+    }
+
+    update() {
+        // Update game objects
+        this.player.update();
+        
+        // Update enemies
+        this.enemies = this.enemies.filter(enemy => !enemy.dead);
+        this.enemies.forEach(enemy => enemy.update());
+        
+        // Update projectiles
+        this.projectiles = this.projectiles.filter(projectile => !projectile.hit && 
+            projectile.x >= 0 && projectile.x <= this.canvas.width &&
+            projectile.y >= 0 && projectile.y <= this.canvas.height);
+        this.projectiles.forEach(projectile => projectile.update());
+        
+        // Update power-ups
+        this.powerUps = this.powerUps.filter(powerUp => !powerUp.collected);
+        
+        // Spawn new objects
+        this.spawnEnemy();
+        this.spawnPowerUp();
+        
+        // Check collisions
+        this.checkCollisions();
+    }
+
+    draw() {
+        // Clear canvas
+        this.ctx.fillStyle = '#1a1a1a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw game objects
+        this.powerUps.forEach(powerUp => powerUp.draw(this.ctx));
+        this.projectiles.forEach(projectile => projectile.draw(this.ctx));
+        this.enemies.forEach(enemy => enemy.draw(this.ctx));
+        this.player.draw(this.ctx);
+        
+        // Draw UI
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = '20px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`Score: ${this.score}`, 10, 30);
+        this.ctx.fillText(`Level: ${this.level}`, 10, 60);
+        
+        if (!this.gameStarted) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.font = '40px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Click or Tap to Start', this.canvas.width / 2, this.canvas.height / 2);
+        }
+        
+        if (this.gameOver) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.font = '40px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Game Over', this.canvas.width / 2, this.canvas.height / 2 - 40);
+            this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
+            this.ctx.font = '20px Arial';
+            this.ctx.fillText('Click or Tap to Restart', this.canvas.width / 2, this.canvas.height / 2 + 80);
+        }
+    }
+
+    animate(currentTime) {
+        const deltaTime = currentTime - this.lastTime;
+        this.lastTime = currentTime;
+
+        if (!this.gameOver) {
+            // Update game objects
+            this.update();
+
+            // Draw game objects
+            this.draw();
+        }
+
+        requestAnimationFrame((time) => this.animate(time));
     }
 
     checkCollisions() {
         // Check weapon hits on enemies
-        this.weapons.forEach((weapon, weaponIndex) => {
+        this.projectiles.forEach((projectile, projectileIndex) => {
             this.enemies.forEach((enemy, enemyIndex) => {
-                if (this.detectCollision(weapon, enemy)) {
-                    enemy.takeDamage(weapon.damage);
+                if (this.detectCollision(projectile, enemy)) {
+                    enemy.takeDamage(projectile.damage);
                     if (enemy.health <= 0) {
                         this.enemies.splice(enemyIndex, 1);
                         this.updateScore(10);
                     }
-                    this.weapons.splice(weaponIndex, 1);
+                    this.projectiles.splice(projectileIndex, 1);
                 }
             });
         });
@@ -183,6 +259,14 @@ class Game {
             if (this.detectCollision(enemy, this.player)) {
                 this.gameOver = true;
                 this.showGameOver();
+            }
+        });
+
+        // Check power-up collisions with player
+        this.powerUps.forEach((powerUp, powerUpIndex) => {
+            if (this.detectCollision(powerUp, this.player)) {
+                this.player.applyPowerUp(powerUp.type);
+                this.powerUps.splice(powerUpIndex, 1);
             }
         });
     }
@@ -201,55 +285,12 @@ class Game {
         this.level = 1;
         this.gameOver = false;
         this.enemies = [];
-        this.weapons = [];
-        this.player = new Player(this);
+        this.projectiles = [];
+        this.powerUps = [];
+        this.player = new Player(this, this.canvas.width / 2, this.canvas.height / 2);
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('score-value').textContent = '0';
         document.getElementById('level-value').textContent = '1';
-    }
-
-    animate(currentTime) {
-        const deltaTime = currentTime - this.lastTime;
-        this.lastTime = currentTime;
-
-        if (!this.gameOver) {
-            // Clear canvas
-            this.ctx.fillStyle = '#000000';
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-            // Update player movement from keyboard
-            this.updatePlayerMovement();
-
-            // Update and draw game objects
-            this.player.update(deltaTime);
-            this.player.draw(this.ctx);
-
-            this.spawnEnemy();
-            
-            this.enemies.forEach(enemy => {
-                enemy.update(deltaTime, this.player);
-                enemy.draw(this.ctx);
-            });
-
-            this.weapons.forEach(weapon => {
-                weapon.update(deltaTime);
-                weapon.draw(this.ctx);
-            });
-
-            this.checkCollisions();
-
-            // Clean up off-screen objects
-            this.enemies = this.enemies.filter(enemy => 
-                enemy.x > -50 && enemy.x < this.canvas.width + 50 &&
-                enemy.y > -50 && enemy.y < this.canvas.height + 50
-            );
-            this.weapons = this.weapons.filter(weapon => 
-                weapon.x > -50 && weapon.x < this.canvas.width + 50 &&
-                weapon.y > -50 && weapon.y < this.canvas.height + 50
-            );
-        }
-
-        requestAnimationFrame((time) => this.animate(time));
     }
 }
 
