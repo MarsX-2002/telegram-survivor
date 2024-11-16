@@ -4,12 +4,21 @@ body {
     overflow: hidden;
     background: #000;
     font-family: Arial, sans-serif;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #game-container {
     position: relative;
     width: 100vw;
     height: 100vh;
+    max-width: 800px;
+    max-height: 600px;
+    margin: auto;
+    background: #000;
 }
 
 #gameCanvas {
@@ -18,6 +27,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
+    touch-action: none;
 }
 
 #ui-overlay {
@@ -27,6 +37,7 @@ body {
     color: white;
     font-size: 20px;
     z-index: 1;
+    pointer-events: none;
 }
 
 #menu {
@@ -58,5 +69,5 @@ body {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }

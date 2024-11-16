@@ -1,6 +1,14 @@
 // Initialize Telegram Mini App
-const tg = window.Telegram.WebApp;
-tg.expand();
+let tg = window.Telegram?.WebApp;
+
+// Fallback for desktop testing
+if (!tg) {
+    tg = {
+        ready: () => {},
+        expand: () => {},
+        isExpanded: true
+    };
+}
 
 class Game {
     constructor() {
@@ -246,7 +254,16 @@ class Game {
 }
 
 // Initialize game when document is loaded
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
+    // Wait for Telegram Web App to be ready
+    if (tg) {
+        tg.ready();
+        tg.expand();
+    }
+    
+    // Initialize game
     const game = new Game();
+    
+    // Setup restart button
     document.getElementById('restart-button').addEventListener('click', () => game.restart());
 });
